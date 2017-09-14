@@ -6,97 +6,86 @@
  */
  ;(function() {
  	'use strict';
+	$.fn.inView = function(){
+	    	// Am I visible?
+	    	// Height and Width are not explicitly necessary in visibility detection, the bottom, right, top and left are the
+	    	// essential checks. If an image is 0x0, it is technically not visible, so it should not be marked as such.
+	    	// That is why either width or height have to be > 0.
+	    	var rect = this[0].getBoundingClientRect();
+	    	return (
+	            (rect.height > 0 || rect.width > 0) &&
+	            rect.bottom >= 0 &&
+	            rect.right >= 0 &&
+	            rect.top <= (window.innerHeight || document.documentElement.clientHeight) &&
+	            rect.left <= (window.innerWidth || document.documentElement.clientWidth)
+	            );
+ 	};
+	 
+	 // set progressive image loading
+	 var progressiveMedias = document.querySelectorAll('.progressiveMedia');
+	 for (var i = 0; i < progressiveMedias.length; i++) {
+	 	loadImage(progressiveMedias[i]);
+	 }
 
-    // set progressive image loading
-    var progressiveMedias = document.querySelectorAll('.progressiveMedia');
-    for (var i = 0; i < progressiveMedias.length; i++) {
-    	loadImage(progressiveMedias[i]);
-    }
+	 function loadImage(progressiveMedia) {
+		  // calculate aspect ratio
+		  // for the aspectRatioPlaceholder-fill
+		  // that helps to set a fixed fill for loading images
+		  var width = progressiveMedia.dataset.width,
+		  height = progressiveMedia.dataset.height,
+		  fill = height / width * 100,
+		  placeholderFill = progressiveMedia.previousElementSibling;
 
-    // global function
-    function loadImage(progressiveMedia) {
-
-        // calculate aspect ratio
-        // for the aspectRatioPlaceholder-fill
-        // that helps to set a fixed fill for loading images
-        var width = progressiveMedia.dataset.width,
-        height = progressiveMedia.dataset.height,
-        fill = height / width * 100,
-        placeholderFill = progressiveMedia.previousElementSibling;
-
-        placeholderFill.setAttribute('style', 'padding-bottom:'+fill+'%;');
-
-
-       
-        // get thumbnail height wight
-        // make canvas fun part
-        var thumbnail = progressiveMedia.querySelector('.progressiveMedia-thumbnail'),
-        smImageWidth = thumbnail.width,
-        smImageheight = thumbnail.height,
-
-        canvas = progressiveMedia.querySelector('.progressiveMedia-canvas'),
-        context = canvas.getContext('2d');
-
-        canvas.height = smImageheight;
-        canvas.width = smImageWidth;
-
-        var img = new Image();
-        img.src = thumbnail.src;
-
-        img.onload = function () {
-            // context.drawImage(img, 0, 0);
-            // draw canvas
-            var canvasImage = new CanvasImage(canvas, img);
-            canvasImage.blur(2);
-
-            // load canvas visible
-            progressiveMedia.classList.add('is-canvasLoaded');
-        };
+		  placeholderFill.setAttribute('style', 'padding-bottom:'+fill+'%;');
 
 
 
-        //Show images when in viewpoint
-        $(window).on('scroll load resize',function(){
-    	//Window width & height
-    	var viewpointWidth = $(window).width(),
-    	viewpointHeight = $(window).height(),
-    	//Document Top pos & Left pos
-    	documentScrollTop = $(document).scrollTop(),
-    	documentScrollLeft = $(document).scrollLeft(),
-    	//Document Positions
-    	minTop = documentScrollTop,
-    	maxTop = documentScrollTop + viewpointHeight,
-    	minLeft = documentScrollLeft,
-    	maxLeft = documentScrollLeft + viewpointWidth;
+		  // get thumbnail height wight
+		  // make canvas fun part
+		  var thumbnail = progressiveMedia.querySelector('.progressiveMedia-thumbnail'),
+		  smImageWidth = thumbnail.width,
+		  smImageheight = thumbnail.height,
 
- 		// grab data-src from original image
-    	// from progressiveMedia-image
-    	//Loop for each image
-    	$(".progressiveMedia-image").each(function(){
-    		var $thisImage = $(this),
-    		$thisImageOffset = $thisImage.offset(),
-    		$notLoadedYet = $thisImage.attr("src");
-    		if ($notLoadedYet=="") {
+		  canvas = progressiveMedia.querySelector('.progressiveMedia-canvas'),
+		  context = canvas.getContext('2d');
 
-    			// onload image visible
-    			if(($thisImageOffset.top > minTop && $thisImageOffset.top < maxTop) && ($thisImageOffset.left > minLeft &&$thisImageOffset.left < maxLeft)) {
-    				
-    				setTimeout(function(){
-    					$thisImage.attr('src',$thisImage.attr('data-src'));
-    					$(".progressiveMedia").addClass('is-imageLoaded');
-    				},2000);
-    			}
-    			
-    		} else {
-    			return true;
-    		}
+		  canvas.height = smImageheight;
+		  canvas.width = smImageWidth;
 
-    	});
-    });
+		  var img = new Image();
+		  img.src = thumbnail.src;
+
+		  img.onload = function () {
+			// context.drawImage(img, 0, 0);
+			// draw canvas
+			var canvasImage = new CanvasImage(canvas, img);
+			canvasImage.blur(2);
+
+			// load canvas visible
+			progressiveMedia.classList.add('is-canvasLoaded');
+		};
+	}
 
 
+	$(window).on('scroll load resize',function(){
+		$(".progressiveMedia-image").each(function(){
+			var $self = $(this),
+			$selfOffset = $self.offset(),
+			$notLoadedYet = $self.attr("src");
+			
+			if ($notLoadedYet == undefined) {
+				var img = new Image();
+				img.src = $self.attr("data-src");
 
-    }
+				img.onload = function () {
+					if($self.inView()) {
+						$self.attr('src',$self.attr('data-src'));
+						$self.parent().addClass('is-imageLoaded');
+					}
+				}
+			}
+		});
+	});
 
 })();
 
@@ -121,7 +110,3 @@ CanvasImage.prototype = {
 		}
 	}
 };
-
-
-
-
